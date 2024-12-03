@@ -2,6 +2,7 @@ package com.pluralsight;
 
 import java.sql.*;
 import java.util.Scanner;
+import org.apache.commons.dbcp2.BasicDataSource;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,11 +19,15 @@ public class Main {
         String username = args[0];
         String password = args[1];
 
-        // load the MySQL Driver
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+        // Create and configure the DataSource
+        try (
+                BasicDataSource dataSource = new BasicDataSource()
+        ) {
+            dataSource.setUrl(url);
+            dataSource.setUsername(username);
+            dataSource.setPassword(password);
+        } catch (SQLException e) {
+            System.out.println("Fail in creating data source.");
         }
 
         // Create the connection and prepared statement in a try-with-resources block
@@ -35,10 +40,9 @@ public class Main {
         } catch (SQLException e) {
             System.out.println("Connection failed.");
         }
-
     }
 
-    private static void homeScreen(Connection connection){
+    private static void homeScreen(Connection connection) {
         Scanner scanner = new Scanner(System.in);
         int option;
         do {
@@ -53,7 +57,7 @@ public class Main {
             option = scanner.nextInt();
             scanner.nextLine();
 
-            switch (option){
+            switch (option) {
                 case 1:
                     displayAllProducts(connection);
                     break;
@@ -66,19 +70,19 @@ public class Main {
                 case 0:
                     break;
             }
-        }while(option != 0);
+        } while (option != 0);
     }
 
     private static void displayAllCategories(Connection connection, Scanner scanner) {
         // define your query
         String query = "SELECT CategoryID, CategoryName FROM categories ORDER BY CategoryID";
-        try(
+        try (
                 // create prepared statement
                 PreparedStatement statement = connection.prepareStatement(query)
-        ){
-            try(// Execute your query
-                ResultSet results = statement.executeQuery(query)
-            ){
+        ) {
+            try (// Execute your query
+                 ResultSet results = statement.executeQuery(query)
+            ) {
                 // process the results
                 System.out.printf("%-12s %-10s\n", "CategoryID", "CategoryName");
                 System.out.printf("%-12s %-10s\n", "-----------", "---------------");
@@ -114,10 +118,10 @@ public class Main {
                 }
                 System.out.println();
 
-            }catch (SQLException e){
+            } catch (SQLException e) {
                 System.out.println("Results failed.");
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println("Prepared statement failed.");
         }
     }
@@ -125,14 +129,14 @@ public class Main {
     private static void displayAllCustomers(Connection connection) {
         // define your query
         String query = "SELECT ContactName, CompanyName, City, Country, Phone FROM customers";
-        try(
+        try (
                 // create prepared statement
                 PreparedStatement statement = connection.prepareStatement(query)
-        ){
-            try(
+        ) {
+            try (
                     // Execute your query
                     ResultSet results = statement.executeQuery(query)
-            ){
+            ) {
                 // process the results
                 System.out.printf("%-25s %-38s %-17s %-13s %-14s\n", "ContactName", "CompanyName", "City", "Country", "Phone");
                 System.out.printf("%-25s %-38s %-17s %-13s %-14s\n", "------------------------",
@@ -144,10 +148,10 @@ public class Main {
                 }
                 System.out.println();
 
-            }catch (SQLException e){
+            } catch (SQLException e) {
                 System.out.println("Results failed.");
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println("Prepared statement failed.");
         }
     }
@@ -173,10 +177,10 @@ public class Main {
                             results.getString(4));
                 }
                 System.out.println();
-            }catch (SQLException e){
+            } catch (SQLException e) {
                 System.out.println("Results failed.");
             }
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println("Prepared statement failed.");
         }
     }
