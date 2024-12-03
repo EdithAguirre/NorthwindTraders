@@ -25,43 +25,17 @@ public class Main {
             throw new RuntimeException(e);
         }
 
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-
-        try {
-            // Create the connection and prepared statement
-            connection = DriverManager.getConnection(url, username, password);
-
+        // Create the connection and prepared statement in a try-with-resources block
+        try (
+                Connection connection = DriverManager.getConnection(url, username, password)
+        ) {
             // Home screen for user to choose what they want to do
             homeScreen(connection);
 
         } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            // Close resources
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            System.out.println("Connection failed.");
         }
+
     }
 
     private static void homeScreen(Connection connection){
@@ -77,6 +51,7 @@ public class Main {
                     Select an option: \
                     """);
             option = scanner.nextInt();
+            scanner.nextLine();
 
             switch (option){
                 case 1:
@@ -86,7 +61,7 @@ public class Main {
                     displayAllCustomers(connection);
                     break;
                 case 3:
-                    displayAllCategories(connection);
+                    displayAllCategories(connection, scanner);
                     break;
                 case 0:
                     break;
@@ -94,60 +69,115 @@ public class Main {
         }while(option != 0);
     }
 
-    private static void displayAllCategories(Connection connection) {
+    private static void displayAllCategories(Connection connection, Scanner scanner) {
+        // define your query
+        String query = "SELECT CategoryID, CategoryName FROM categories ORDER BY CategoryID";
+        try(
+                // create prepared statement
+                PreparedStatement statement = connection.prepareStatement(query)
+        ){
+            try(// Execute your query
+                ResultSet results = statement.executeQuery(query)
+            ){
+                // process the results
+                System.out.printf("%-12s %-10s\n", "CategoryID", "CategoryName");
+                System.out.printf("%-12s %-10s\n", "-----------", "---------------");
+                while (results.next()) {
+                    System.out.printf("%-12s %-10s\n", results.getString(1),
+                            results.getString(2));
+                }
+                System.out.println();
 
-        
+                // Prompt the user for a category id to display all products in that category
+                System.out.print("Enter a category ID to display all products in that category: ");
+                int idInput = scanner.nextInt();
+                scanner.nextLine();
+
+                // create prepared statement
+                PreparedStatement productsPreparedStatement = connection.prepareStatement("SELECT ProductID," +
+                        " ProductName, UnitPrice, UnitsInStock FROM products WHERE CategoryID = ?");
+
+                // Set parameter for prepared statement
+                productsPreparedStatement.setInt(1, idInput);
+
+                // Execute your query
+                ResultSet categoryResults = productsPreparedStatement.executeQuery();
+
+                // process the results
+                System.out.printf("%-5s %-35s %-10s %-10s\n ", "Id", "Name", "Price", "Stock");
+                System.out.printf("%-5s %-35s %-10s %-10s\n", "----",
+                        "----------------------------------", "---------", "---------");
+                while (categoryResults.next()) {
+                    System.out.printf("%-5s %-35s %-10.2f %-10s\n", categoryResults.getString(1),
+                            categoryResults.getString(2), categoryResults.getFloat(3),
+                            categoryResults.getString(4));
+                }
+                System.out.println();
+
+            }catch (SQLException e){
+                System.out.println("Results failed.");
+            }
+        }catch (SQLException e){
+            System.out.println("Prepared statement failed.");
+        }
     }
 
     private static void displayAllCustomers(Connection connection) {
-        try {
-            // define your query
-            String query = "SELECT ContactName, CompanyName, City, Country, Phone FROM customers";
+        // define your query
+        String query = "SELECT ContactName, CompanyName, City, Country, Phone FROM customers";
+        try(
+                // create prepared statement
+                PreparedStatement statement = connection.prepareStatement(query)
+        ){
+            try(
+                    // Execute your query
+                    ResultSet results = statement.executeQuery(query)
+            ){
+                // process the results
+                System.out.printf("%-25s %-38s %-17s %-13s %-14s\n", "ContactName", "CompanyName", "City", "Country", "Phone");
+                System.out.printf("%-25s %-38s %-17s %-13s %-14s\n", "------------------------",
+                        "-------------------------------------", "----------------", "------------", "-------------");
+                while (results.next()) {
+                    System.out.printf("%-25s %-38s %-17s %-13s %-10s\n", results.getString(1),
+                            results.getString(2), results.getString(3),
+                            results.getString(4), results.getString(5));
+                }
+                System.out.println();
 
-            // create prepared statement
-            PreparedStatement statement = connection.prepareStatement(query);
-
-            // Execute your query
-            ResultSet results = statement.executeQuery(query);
-
-            // process the results
-            System.out.printf("%-25s %-38s %-17s %-10s\n", "ContactName", "CompanyName", "City", "Country", "Phone");
-            System.out.printf("%-25s %-38s %-17s %-10s\n", "------------------------",
-                    "-------------------------------------", "----------------", "------------");
-            while (results.next()) {
-                System.out.printf("%-25s %-38s %-17s %-10s\n", results.getString(1),
-                        results.getString(2), results.getString(3),
-                        results.getString(4));
+            }catch (SQLException e){
+                System.out.println("Results failed.");
             }
-            System.out.println();
         }catch (SQLException e){
-            e.printStackTrace();
+            System.out.println("Prepared statement failed.");
         }
     }
 
     private static void displayAllProducts(Connection connection) {
-        try {
-            // define your query
-            String query = "SELECT ProductID, ProductName, UnitPrice, UnitsInStock FROM products ORDER BY Country";
-
-            // create prepared statement
-            PreparedStatement statement = connection.prepareStatement(query);
-
-            // Execute your query
-            ResultSet results = statement.executeQuery(query);
-
-            // process the results
-            System.out.printf("%-5s %-35s %-10s %-10s\n", "Id", "Name", "Price", "Stock");
-            System.out.printf("%-5s %-35s %-10s %-10s\n", "----",
-                    "----------------------------------", "---------", "---------");
-            while (results.next()) {
-                System.out.printf("%-5s %-35s %-10.2f %-10s\n", results.getString(1),
-                        results.getString(2), results.getFloat(3),
-                        results.getString(4));
+        // define your query
+        String query = "SELECT ProductID, ProductName, UnitPrice, UnitsInStock FROM products ORDER BY ProductID";
+        try (
+                // create prepared statement
+                PreparedStatement statement = connection.prepareStatement(query)
+        ) {
+            try (
+                    // Execute your query
+                    ResultSet results = statement.executeQuery(query)
+            ) {
+                // process the results
+                System.out.printf("%-5s %-35s %-10s %-10s\n", "Id", "Name", "Price", "Stock");
+                System.out.printf("%-5s %-35s %-10s %-10s\n", "----",
+                        "----------------------------------", "---------", "---------");
+                while (results.next()) {
+                    System.out.printf("%-5s %-35s %-10.2f %-10s\n", results.getString(1),
+                            results.getString(2), results.getFloat(3),
+                            results.getString(4));
+                }
+                System.out.println();
+            }catch (SQLException e){
+                System.out.println("Results failed.");
             }
-            System.out.println();
         }catch (SQLException e){
-            e.printStackTrace();
+            System.out.println("Prepared statement failed.");
         }
     }
 
